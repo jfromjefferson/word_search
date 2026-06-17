@@ -11,7 +11,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.6.1
-  hive_flutter: ^1.1.0
+  hive_ce: ^2.10.1
+  hive_ce_flutter: ^2.2.0
   audioplayers: ^6.1.0
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.2

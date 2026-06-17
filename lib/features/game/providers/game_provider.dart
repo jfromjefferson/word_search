@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:word_search/core/constants/app_strings.dart';
 import 'package:word_search/core/constants/enums.dart';
 import 'package:word_search/core/constants/game_constants.dart';
 import 'package:word_search/core/services/audio_manager.dart';
@@ -121,6 +122,8 @@ class GameNotifier extends StateNotifier<GameState> {
   final AudioManager _audio;
   Timer? _timer;
 
+  String get _locale => _ref.read(settingsProvider).language;
+
   GameNotifier(this._ref)
       : _audio = AudioManager(),
         super(const GameState());
@@ -177,7 +180,7 @@ class GameNotifier extends StateNotifier<GameState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to generate puzzle: $e',
+        error: '${AppStrings.puzzleError(_locale)} $e',
       );
     }
   }
@@ -317,7 +320,7 @@ class GameNotifier extends StateNotifier<GameState> {
       state = state.copyWith(
         puzzle: updatedPuzzle,
         currentSelection: [],
-        feedbackMessage: '${foundWord.word} found!',
+        feedbackMessage: AppStrings.wordFoundMsg(_locale, foundWord.word),
         isFeedbackError: false,
         clearHint: true,
       );
@@ -336,7 +339,7 @@ class GameNotifier extends StateNotifier<GameState> {
       state = state.copyWith(
         puzzle: puzzle.copyWith(mistakes: newMistakes),
         currentSelection: [],
-        feedbackMessage: 'Try again!',
+        feedbackMessage: AppStrings.tryAgain(_locale),
         isFeedbackError: true,
       );
 
@@ -352,6 +355,9 @@ class GameNotifier extends StateNotifier<GameState> {
 
   void _handleVictory(Puzzle puzzle) {
     _timer?.cancel();
+
+    _ref.read(storageServiceProvider).clearPuzzle();
+    _ref.read(hasSavedGameProvider.notifier).state = false;
 
     final profileNotifier = _ref.read(profileProvider.notifier);
     final difficulty = puzzle.difficulty.name;
@@ -536,8 +542,64 @@ class GameNotifier extends StateNotifier<GameState> {
   }
 
   void quitGame() {
+    _savePuzzle();
     _timer?.cancel();
     state = const GameState();
+  }
+
+  void quitWithoutSaving() {
+    _ref.read(storageServiceProvider).clearPuzzle();
+    _ref.read(hasSavedGameProvider.notifier).state = false;
+    _timer?.cancel();
+    state = const GameState();
+  }
+
+  void _savePuzzle() {
+    final puzzle = state.puzzle;
+    if (puzzle == null || puzzle.isCompleted) return;
+    _ref.read(storageServiceProvider).savePuzzle(puzzle.toJson());
+    _ref.read(hasSavedGameProvider.notifier).state = true;
+  }
+
+  Future<void> loadGame() async {
+    final storage = _ref.read(storageServiceProvider);
+    final data = await storage.loadPuzzle();
+    if (data == null) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final puzzle = Puzzle.fromJson(data);
+      final totalSeconds = GameConstants.timerSeconds[puzzle.difficulty.name] ?? 300;
+      final elapsed = DateTime.now().millisecondsSinceEpoch - puzzle.startTime;
+      final remaining = puzzle.gameMode == GameMode.timed
+          ? ((totalSeconds * 1000) - elapsed) ~/ 1000
+          : 0;
+
+      state = state.copyWith(
+        puzzle: puzzle,
+        isLoading: false,
+        isPlaying: true,
+        isPaused: false,
+        isCompleted: false,
+        selectedDifficulty: puzzle.difficulty,
+        selectedCategory: puzzle.category,
+        selectedMode: puzzle.gameMode,
+        currentSelection: [],
+        elapsedSeconds: elapsed ~/ 1000,
+        remainingSeconds: remaining > 0 ? remaining : 0,
+        showVictoryDialog: false,
+        clearFeedback: true,
+        clearHint: true,
+        clearAchievements: true,
+      );
+
+      if (puzzle.gameMode == GameMode.timed && remaining > 0) {
+        _startTimer();
+      }
+    } catch (_) {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   @override
@@ -549,4 +611,9 @@ class GameNotifier extends StateNotifier<GameState> {
 
 final gameProvider = StateNotifierProvider<GameNotifier, GameState>((ref) {
   return GameNotifier(ref);
+});
+
+final hasSavedGameProvider = StateProvider<bool>((ref) {
+  final storage = ref.watch(storageServiceProvider);
+  return storage.hasSavedPuzzle;
 });

@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:word_search/core/theme/app_theme.dart';
 import 'package:word_search/features/home/screens/home_screen.dart';
 import 'package:word_search/features/onboarding/screens/onboarding_screen.dart';
@@ -28,8 +29,9 @@ void _detectAndSetDeviceLanguage(Ref ref) {
   }
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   runApp(const ProviderScope(child: WordQuestApp()));
 }
 

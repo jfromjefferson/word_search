@@ -342,7 +342,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               const SizedBox(height: 12),
               GradientButton(
                 text: AppStrings.quit(locale),
-                icon: Icons.exit_to_app,
+                icon: Icons.save,
                 width: 200,
                 gradient: const LinearGradient(
                   colors: [AppTheme.errorColor, Color(0xFFFF5252)],
@@ -401,12 +401,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           ),
           TextButton(
             onPressed: () {
-              ref.read(gameProvider.notifier).quitGame();
+              ref.read(gameProvider.notifier).quitWithoutSaving();
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: Text(AppStrings.quit(locale),
-                style: const TextStyle(color: AppTheme.errorColor)),
+            child: Text(AppStrings.quit(locale), style: const TextStyle(color: AppTheme.errorColor)),
           ),
         ],
       ),

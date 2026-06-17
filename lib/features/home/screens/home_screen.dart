@@ -103,6 +103,7 @@ class _PlayTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider);
     final gameState = ref.watch(gameProvider);
+    final hasSaved = ref.watch(hasSavedGameProvider);
     final locale = Localizations.localeOf(context).languageCode;
 
     final categories = ThemeCategory.values.where((c) => c != ThemeCategory.mixed);
@@ -117,6 +118,10 @@ class _PlayTab extends ConsumerWidget {
           const SizedBox(height: 20),
           _buildStatsRow(profile, locale),
           const SizedBox(height: 24),
+          if (hasSaved) ...[
+            _buildContinueButton(context, ref, locale),
+            const SizedBox(height: 24),
+          ],
           _buildQuickPlay(context, ref, gameState, locale),
           const SizedBox(height: 24),
           _buildCategoryGrid(context, ref, categories.toList(), gameState, locale),
@@ -215,6 +220,39 @@ class _PlayTab extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContinueButton(BuildContext context, WidgetRef ref, String locale) {
+    final gameState = ref.watch(gameProvider);
+    final puzzle = gameState.puzzle;
+
+    String subtitle = locale == 'pt' ? 'Continuar de onde parou' : locale == 'es' ? 'Continuar donde lo dejaste' : 'Continue where you left off';
+    if (puzzle != null && !gameState.isPlaying) {
+      subtitle = '${puzzle.category.displayNameFor(locale)} - ${puzzle.difficulty.labelFor(locale)}';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          locale == 'pt' ? 'Jogo em Andamento' : locale == 'es' ? 'Juego en Curso' : 'Game in Progress',
+          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        GradientButton(
+          text: locale == 'pt' ? 'Continuar' : locale == 'es' ? 'Continuar' : 'Continue',
+          icon: Icons.play_arrow_rounded,
+          gradient: AppTheme.secondaryGradient,
+          height: 56,
+          onPressed: gameState.isLoading ? null : () async {
+            await ref.read(gameProvider.notifier).loadGame();
+            if (context.mounted) {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const GameScreen()));
+            }
+          },
         ),
       ],
     );

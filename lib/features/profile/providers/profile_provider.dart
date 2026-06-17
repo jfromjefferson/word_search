@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:word_search/core/services/storage_service.dart';
+import 'package:word_search/features/settings/settings_provider.dart';
 import 'package:word_search/shared/models/user_profile.dart';
-
-final storageServiceProvider = Provider<StorageService>((ref) {
-  return StorageService();
-});
 
 class ProfileNotifier extends StateNotifier<UserProfile> {
   final StorageService _storage;

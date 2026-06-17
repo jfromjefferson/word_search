@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 import 'package:word_search/shared/models/app_settings.dart';
 import 'package:word_search/shared/models/user_profile.dart';
 
@@ -8,25 +8,23 @@ class StorageService {
   factory StorageService() => _instance;
   StorageService._internal();
 
-  final Map<String, dynamic> _memoryCache = {};
-
-  bool _initialized = false;
+  Box? _box;
 
   Future<void> init() async {
-    if (_initialized) return;
-    _initialized = true;
-    debugPrint('StorageService initialized (in-memory mode)');
+    if (_box != null) return;
+    _box = await Hive.openBox('word_quest');
+    debugPrint('StorageService initialized with Hive CE');
   }
 
   Future<void> saveProfile(UserProfile profile) async {
     profile.updatedAt = DateTime.now();
-    _memoryCache['profile'] = jsonEncode(profile.toJson());
+    await _box?.put('profile', profile.toJson());
   }
 
   Future<UserProfile> loadProfile() async {
-    final data = _memoryCache['profile'] as String?;
-    if (data != null) {
-      return UserProfile.fromJson(jsonDecode(data) as Map<String, dynamic>);
+    final data = _box?.get('profile');
+    if (data != null && data is Map) {
+      return UserProfile.fromJson(Map<String, dynamic>.from(data));
     }
     final defaultProfile = UserProfile();
     await saveProfile(defaultProfile);
@@ -34,65 +32,38 @@ class StorageService {
   }
 
   Future<void> saveSettings(AppSettings settings) async {
-    _memoryCache['settings'] = jsonEncode(settings.toJson());
+    await _box?.put('settings', settings.toJson());
   }
 
   Future<AppSettings> loadSettings() async {
-    final data = _memoryCache['settings'] as String?;
-    if (data != null) {
-      return AppSettings.fromJson(jsonDecode(data) as Map<String, dynamic>);
+    final data = _box?.get('settings');
+    if (data != null && data is Map) {
+      return AppSettings.fromJson(Map<String, dynamic>.from(data));
     }
     final defaultSettings = AppSettings();
     await saveSettings(defaultSettings);
     return defaultSettings;
   }
 
-  Future<void> savePuzzleState(Map<String, dynamic> puzzleData) async {
-    _memoryCache['activePuzzle'] = jsonEncode(puzzleData);
+  Future<void> savePuzzle(Map<String, dynamic> data) async {
+    await _box?.put('activePuzzle', data);
   }
 
-  Future<Map<String, dynamic>?> loadPuzzleState() async {
-    final data = _memoryCache['activePuzzle'] as String?;
-    if (data != null) {
-      return jsonDecode(data) as Map<String, dynamic>;
+  Future<Map<String, dynamic>?> loadPuzzle() async {
+    final data = _box?.get('activePuzzle');
+    if (data != null && data is Map) {
+      return Map<String, dynamic>.from(data);
     }
     return null;
   }
 
-  Future<void> clearPuzzleState() async {
-    _memoryCache.remove('activePuzzle');
+  bool get hasSavedPuzzle => _box?.containsKey('activePuzzle') ?? false;
+
+  Future<void> clearPuzzle() async {
+    await _box?.delete('activePuzzle');
   }
 
-  Future<void> saveLastDailyDate(DateTime date) async {
-    _memoryCache['lastDailyDate'] = date.toIso8601String();
-  }
-
-  Future<DateTime?> loadLastDailyDate() async {
-    final data = _memoryCache['lastDailyDate'] as String?;
-    if (data != null) return DateTime.tryParse(data);
-    return null;
-  }
-
-  Future<void> saveDailyClaimDate(DateTime date) async {
-    _memoryCache['dailyClaimDate'] = date.toIso8601String();
-  }
-
-  Future<DateTime?> loadDailyClaimDate() async {
-    final data = _memoryCache['dailyClaimDate'] as String?;
-    if (data != null) return DateTime.tryParse(data);
-    return null;
-  }
-
-  Future<void> saveGamesPlayedToday(int count) async {
-    _memoryCache['gamesPlayedToday'] = count.toString();
-  }
-
-  Future<int> loadGamesPlayedToday() async {
-    final data = _memoryCache['gamesPlayedToday'] as String?;
-    return int.tryParse(data ?? '0') ?? 0;
-  }
-
-  Future<void> clearCache() async {
-    _memoryCache.clear();
+  Future<void> clearAll() async {
+    await _box?.clear();
   }
 }

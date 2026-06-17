@@ -361,4 +361,22 @@ class AppStrings {
         'es' => '¡Recompensa del día $day reclamada! $emoji',
         _ => 'Day $day reward claimed! $emoji',
       };
+
+  static String tryAgain(String locale) => switch (locale) {
+        'pt' => 'Tente novamente!',
+        'es' => '¡Intenta de nuevo!',
+        _ => 'Try again!',
+      };
+
+  static String wordFoundMsg(String locale, String word) => switch (locale) {
+        'pt' => '$word encontrada!',
+        'es' => '¡$word encontrada!',
+        _ => '$word found!',
+      };
+
+  static String puzzleError(String locale) => switch (locale) {
+        'pt' => 'Erro ao gerar puzzle:',
+        'es' => 'Error al generar puzzle:',
+        _ => 'Failed to generate puzzle:',
+      };
 }
